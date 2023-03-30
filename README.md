@@ -1,5 +1,7 @@
 # SQL Dump Parser
 
+[![](https://jitpack.io/v/azazar/sql-dump-parser.svg)](https://jitpack.io/#azazar/sql-dump-parser)
+
 SQL Dump Parser is a lightweight Java library designed to parse SQL dump files, focusing on handling SQL statements, tokens, and groups from a given input string. The library supports basic SQL syntax, including SELECT, INSERT, and CREATE TABLE statements. It can be extended to support additional SQL dialects and constructs.
 
 ## Features
