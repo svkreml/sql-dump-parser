@@ -12,7 +12,55 @@ SQL Dump Parser is a lightweight Java library designed to parse SQL dump files, 
 
 ## Installation
 
+### Using JitPack
+
+To use SQL Dump Parser with JitPack, add the following to your project's `build.gradle` or `pom.xml` files:
+
+#### Gradle
+
+Add the JitPack repository to your `build.gradle`:
+
+```groovy
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+```
+
+Add the dependency:
+
+```groovy
+dependencies {
+    implementation 'com.github.azazar:sql-dump-parser:1.1'
+}
+```
+
+#### Maven
+
+Add the JitPack repository to your `pom.xml`:
+
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+```
+
+Add the dependency:
+
+```xml
+<dependency>
+    <groupId>com.github.azazar</groupId>
+    <artifactId>sql-dump-parser</artifactId>
+    <version>1.1</version>
+</dependency>
+```
+
+### Manual Installation
+
 To use SQL Dump Parser in your project, simply include the JAR file in your project's classpath.
+
 
 ## Usage Examples
 
