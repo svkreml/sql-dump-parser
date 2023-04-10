@@ -29,6 +29,9 @@ public class SqlStatement extends SqlTokenGroup {
     }
 
     public CharSequence getCommand() {
+        if (getTokens().isEmpty())
+            return "";
+
         return getTokens().get(0).toString();
     }
     
