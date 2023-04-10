@@ -16,7 +16,6 @@
  */
 package com.azazar.sqldumpparser;
 
-import java.nio.CharBuffer;
 import java.util.Locale;
 
 /**
@@ -48,14 +47,6 @@ public class SqlUtil {
 
     public static boolean isNumber(char ch) {
         return ch >= '0' && ch <= '9';
-    }
-    
-    public static void advance(CharBuffer buf) {
-        buf.get();
-    }
-    
-    public static void advance(CharBuffer buf, int offset) {
-        buf.position(buf.position() + offset);
     }
     
 }

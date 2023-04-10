@@ -14,23 +14,31 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.azazar.sqldumpparser;
-
-import com.azazar.sqldumpparser.util.ParseBuffer;
-import java.text.ParseException;
+package com.azazar.sqldumpparser.util;
 
 /**
  *
  * @author Azazar <spam@azazar.com>
  */
-public class SqlParseException extends ParseException {
+public final class CharStreamParseBuffer extends CharSequenceParseBuffer {
+    
+    protected CharStreamBuffer buf;
 
-    public SqlParseException(String message, ParseBuffer buffer) {
-        this(message, buffer.subSequence(0, Math.min(40, buffer.length())), buffer.position());
+    public CharStreamParseBuffer(CharStreamBuffer buf) {
+        super(buf);
+        this.buf = buf;
     }
 
-    public SqlParseException(String message, CharSequence s, int errorOffset) {
-        super(message + " (" + s.toString() + ')', errorOffset);
+    @Override
+    public void advance(int offset) {
+        super.advance(offset);
+        buf.discardBufferedData(ofs);
+    }
+
+    @Override
+    public void advance() {
+        super.advance();
+        buf.discardBufferedData(ofs);
     }
 
 }

@@ -16,7 +16,17 @@
  */
 package com.azazar.sqldumpparser;
 
+import java.io.CharArrayWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -24,8 +34,59 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author Azazar <spam@azazar.com>
  */
 public class SqlParserTest {
+
+    private static String testSql;
     
     public SqlParserTest() {
+    }
+
+    @BeforeAll
+    public static void beforeAll() throws IOException {
+        var resourcePath = "mysql_dump.sql";
+        
+        try (InputStreamReader reader = new InputStreamReader(SqlParserTest.class.getResourceAsStream(resourcePath), StandardCharsets.UTF_8)) {
+            CharArrayWriter w = new CharArrayWriter();
+            
+            reader.transferTo(w);
+            
+            testSql = w.toString();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void testMysqlDumpResource(boolean streamBuffer) throws Exception {
+        var p = new SqlParser();
+        
+        List<SqlStatement> ts = new ArrayList<SqlStatement>();
+
+        if (streamBuffer) {
+            // Load the MySQL dump file as a resource
+            try (StringReader reader = new StringReader(testSql)) {
+                // Parse the loaded MySQL dump
+                ts = p.parse(reader);
+            }
+        }
+        else {
+            ts = p.parse(testSql);
+        }
+
+        // Add your assertions to check the parsed tokens and statements
+        // For example, you can check the number of statements or specific tokens within the statements
+        assertNotEquals(0, ts.size());
+
+        int creates = 0;
+        int inserts = 0;
+
+        for (SqlStatement stmt : ts) {
+            if (stmt.getCommand().toString().equals("CREATE"))
+                creates++;
+            else if (stmt.getCommand().toString().equals("INSERT"))
+                inserts++;
+        }
+
+        assertNotEquals(0, creates);
+        assertNotEquals(0, inserts);
     }
 
     @Test

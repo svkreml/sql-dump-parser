@@ -26,6 +26,7 @@ public class SqlDelimiter implements SqlToken {
     public static final SqlDelimiter LEFT_PARENTHESES = new SqlDelimiter('(');
     public static final SqlDelimiter RIGHT_PARENTHESES = new SqlDelimiter(')');
     public static final SqlDelimiter EQUAL = new SqlDelimiter('=');
+    public static final SqlDelimiter DOT = new SqlDelimiter('.');
     
     private char value;
 

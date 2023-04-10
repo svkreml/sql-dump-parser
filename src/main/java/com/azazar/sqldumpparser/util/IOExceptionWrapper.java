@@ -14,23 +14,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.azazar.sqldumpparser;
+package com.azazar.sqldumpparser.util;
 
-import com.azazar.sqldumpparser.util.ParseBuffer;
-import java.text.ParseException;
+import java.io.IOException;
 
 /**
  *
  * @author Azazar <spam@azazar.com>
  */
-public class SqlParseException extends ParseException {
-
-    public SqlParseException(String message, ParseBuffer buffer) {
-        this(message, buffer.subSequence(0, Math.min(40, buffer.length())), buffer.position());
+public class IOExceptionWrapper extends RuntimeException {
+    
+    public IOExceptionWrapper(IOException cause) {
+        super(cause);
     }
 
-    public SqlParseException(String message, CharSequence s, int errorOffset) {
-        super(message + " (" + s.toString() + ')', errorOffset);
+    @Override
+    public IOException getCause() {
+        return (IOException) super.getCause();
     }
 
 }

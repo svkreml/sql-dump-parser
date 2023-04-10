@@ -32,7 +32,7 @@ Add the dependency:
 
 ```groovy
 dependencies {
-    implementation 'com.github.azazar:sql-dump-parser:1.1'
+    implementation 'com.github.azazar:sql-dump-parser:1.2'
 }
 ```
 
@@ -55,7 +55,7 @@ Add the dependency:
 <dependency>
     <groupId>com.github.azazar</groupId>
     <artifactId>sql-dump-parser</artifactId>
-    <version>1.1</version>
+    <version>1.2</version>
 </dependency>
 ```
 
@@ -66,59 +66,102 @@ To use SQL Dump Parser in your project, simply include the JAR file in your proj
 
 ## Usage Examples
 
-### Parsing a single SQL statement
+This library provides a simple SQL dump parser to process SQL statements and extract data from `INSERT` statements. Below are a few examples of how to use the library to achieve this.
+
+### Example 1: Parsing SQL from a String
 
 ```java
-import com.azazar.sqldumpparser.SqlParser;
-import com.azazar.sqldumpparser.SqlStatement;
-
-import java.util.List;
+import com.azazar.sqldumpparser.*;
 
 public class Main {
     public static void main(String[] args) {
-        SqlParser parser = new SqlParser();
-        String sql = "SELECT * FROM users;";
+        String sql = "INSERT INTO users (id, name, age) VALUES (1, 'John Doe', 30);";
+        
         try {
+            SqlParser parser = new SqlParser();
             List<SqlStatement> statements = parser.parse(sql);
-            // Process the parsed statements
+            
+            for (SqlStatement stmt : statements) {
+                if (stmt.getCommand().toString().equalsIgnoreCase("INSERT")) {
+                    System.out.println("INSERT statement found:");
+                    System.out.println(stmt);
+                }
+            }
         } catch (SqlParseException e) {
-            System.err.println("Error parsing SQL: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
 ```
 
-### Parsing multiple SQL statements
+### Example 2: Parsing SQL from a File
 
 ```java
-import com.azazar.sqldumpparser.SqlParser;
-import com.azazar.sqldumpparser.SqlStatement;
-
+import com.azazar.sqldumpparser.*;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        SqlParser parser = new SqlParser();
-        String sql = """
-                     CREATE TABLE users (
-                         id INT NOT NULL AUTO_INCREMENT,
-                         username VARCHAR(255) NOT NULL,
-                         email VARCHAR(255) NOT NULL UNIQUE,
-                         password VARCHAR(255) NOT NULL,
-                         PRIMARY KEY (id)
-                     );
-                     INSERT INTO users (username, email, password) VALUES ('test', 'test@example.com', 'password');
-                     SELECT * FROM users;
-                     """;
         try {
-            List<SqlStatement> statements = parser.parse(sql);
-            // Process the parsed statements
-        } catch (SqlParseException e) {
-            System.err.println("Error parsing SQL: " + e.getMessage());
+            FileReader fileReader = new FileReader("path/to/your/sql_dump.sql");
+            
+            SqlParser parser = new SqlParser();
+            List<SqlStatement> statements = parser.parse(fileReader);
+            
+            for (SqlStatement stmt : statements) {
+                if (stmt.getCommand().toString().equalsIgnoreCase("INSERT")) {
+                    System.out.println("INSERT statement found:");
+                    System.out.println(stmt);
+                }
+            }
+        } catch (SqlParseException | IOException e) {
+            e.printStackTrace();
         }
     }
 }
 ```
+
+### Example 3: Extracting Data from an INSERT Statement
+
+```java
+import com.azazar.sqldumpparser.*;
+import com.azazar.sqldumpparser.util.ParseBuffer;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        String sql = "INSERT INTO users (id, name, age) VALUES (1, 'John Doe', 30);";
+        
+        try {
+            SqlParser parser = new SqlParser();
+            List<SqlStatement> statements = parser.parse(sql);
+            
+            for (SqlStatement stmt : statements) {
+                if (stmt.getCommand().toString().equalsIgnoreCase("INSERT")) {
+                    System.out.println("Data from INSERT statement:");
+
+                    List<SqlToken> tokens = stmt.getTokens();
+                    int valueStartIndex = tokens.indexOf(SqlDelimiter.LEFT_PARENTHESES) + 1;
+                    int valueEndIndex = tokens.lastIndexOf(SqlDelimiter.RIGHT_PARENTHESES);
+
+                    for (int i = valueStartIndex; i < valueEndIndex; i++) {
+                        SqlToken token = tokens.get(i);
+                        if (token instanceof SqlString || token instanceof SqlInteger || token instanceof SqlReal) {
+                            System.out.println(token);
+                        }
+                    }
+                }
+            }
+        } catch (SqlParseException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+These examples demonstrate how to use the `SqlParser` class to parse SQL strings, read SQL dumps from files, and extract data from `INSERT` statements.
 
 # License
 

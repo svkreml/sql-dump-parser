@@ -16,13 +16,14 @@
  */
 package com.azazar.sqldumpparser;
 
-import java.nio.CharBuffer;
+import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import org.apache.commons.lang3.StringUtils;
-
-import static com.azazar.sqldumpparser.SqlUtil.*;
+import com.azazar.sqldumpparser.util.IOExceptionWrapper;
+import com.azazar.sqldumpparser.util.ParseBuffer;
 
 /**
  * A class that represents an SQL parser. The parser is designed to process SQL statements, 
@@ -44,7 +45,14 @@ import static com.azazar.sqldumpparser.SqlUtil.*;
  */
 public class SqlParser {
     
+    /**
+     * ArrayList of SqlTokens used to store the parsed tokens.
+     */
     ArrayList<SqlToken> tokenBuffer = new ArrayList<>(10);
+    
+    /**
+     * StringBuilder used to store the parsed strings.
+     */
     StringBuilder stringBuffer = new StringBuilder(10);
 
     /**
@@ -62,7 +70,7 @@ public class SqlParser {
      * @return a list of SqlStatement objects.
      * @throws SqlParseException if there is a syntax error in the input SQL string.
      */
-    public List<SqlStatement> parse(String str) throws SqlParseException {
+    public List<SqlStatement> parse(CharSequence str) throws SqlParseException {
         ArrayList<SqlStatement> result = new ArrayList<>();
         
         parse(str, result::add);
@@ -77,8 +85,40 @@ public class SqlParser {
      * @param stmtConsumer a Consumer instance that will be called for each SqlStatement.
      * @throws SqlParseException if there is a syntax error in the input SQL string.
      */
-    public void parse(String str, Consumer<SqlStatement> stmtConsumer) throws SqlParseException {
-        parse(CharBuffer.wrap(str), stmtConsumer);
+    public void parse(CharSequence str, Consumer<SqlStatement> stmtConsumer) throws SqlParseException {
+        parse(ParseBuffer.wrap(str), stmtConsumer);
+    }
+
+    /**
+     * Parses an SQL string from a Reader and returns a list of SqlStatement objects.
+     *
+     * @param reader the Reader containing the SQL string to parse.
+     * @return a list of SqlStatement objects.
+     * @throws SqlParseException if there is a syntax error in the input SQL string.
+     * @throws IOException if an I/O error occurs while reading from the Reader.
+     */
+    public List<SqlStatement> parse(Reader reader) throws SqlParseException, IOException {
+        ArrayList<SqlStatement> result = new ArrayList<>();
+        
+        parse(reader, result::add);
+        
+        return result;
+    }
+
+    /**
+     * Parses an SQL string from a Reader and calls the stmtConsumer for each SqlStatement.
+     *
+     * @param reader the Reader containing the SQL string to parse.
+     * @param stmtConsumer a Consumer instance that will be called for each SqlStatement.
+     * @throws SqlParseException if there is a syntax error in the input SQL string.
+     * @throws IOException if an I/O error occurs while reading from the Reader.
+     */
+    public void parse(Reader reader, Consumer<SqlStatement> stmtConsumer) throws SqlParseException, IOException {
+        try {
+            parse(ParseBuffer.wrap(reader), stmtConsumer);
+        } catch (IOExceptionWrapper ex) {
+            throw ex.getCause();
+        }
     }
 
     /**
@@ -88,27 +128,27 @@ public class SqlParser {
      * @param stmtConsumer a Consumer instance that will be called for each SqlStatement.
      * @throws SqlParseException if there is a syntax error in the input SQL string.
      */    
-    public void parse(CharBuffer buf, Consumer<SqlStatement> stmtConsumer) throws SqlParseException {
+    public void parse(ParseBuffer buf, Consumer<SqlStatement> stmtConsumer) throws SqlParseException {
         skipWhitespacesAndComments(buf);
         
-        while(buf.hasRemaining()) {
+        while(!buf.isEmpty()) {
             parseStatement(buf, stmtConsumer);
             
             skipWhitespacesAndComments(buf);
         }
     }
     
-    private void skipWhitespacesAndComments(CharBuffer buf) throws SqlParseException {
-        while(buf.hasRemaining()) {
+    private void skipWhitespacesAndComments(ParseBuffer buf) throws SqlParseException {
+        while(!buf.isEmpty()) {
             char ch = buf.charAt(0);
             
             if (ch == ' ' || ch == '\t') {
-                buf.get();
+                buf.advance();
                 continue;
             }
             
             if (ch == '\r' || ch == '\n') {
-                buf.get();
+                buf.advance();
                 continue;
             }
 
@@ -117,9 +157,9 @@ public class SqlParser {
                 int end = StringUtils.indexOf(buf, "\n", 2);
 
                 if (end == -1)
-                    buf.position(buf.limit());
+                    buf.advance(buf.length());
                 else
-                    buf.position(end + 1);
+                    buf.advance(end + 1);
                 
                 continue;
             }
@@ -131,7 +171,7 @@ public class SqlParser {
                 if (end == -1)
                     throw new SqlParseException("Endless comment", buf);
 
-                buf.position(end + 2);
+                buf.advance(end + 2);
                 
                 continue;
             }
@@ -140,19 +180,19 @@ public class SqlParser {
         }
     }
 
-    private void parseStatement(CharBuffer buf, Consumer<SqlStatement> stmtConsumer) throws SqlParseException {
+    private void parseStatement(ParseBuffer buf, Consumer<SqlStatement> stmtConsumer) throws SqlParseException {
         tokenBuffer.clear();
         parseGroup(buf, tokenBuffer, SqlUtil.SPLITTER);
         stmtConsumer.accept(new SqlStatement(new ArrayList<>(tokenBuffer)));
     }
 
-    private ArrayList<SqlToken> parseGroup(CharBuffer buf, char delimiter) throws SqlParseException {
+    private ArrayList<SqlToken> parseGroup(ParseBuffer buf, char delimiter) throws SqlParseException {
         ArrayList<SqlToken> result = new ArrayList<>();
         
         if (delimiter == ')')
             result.add(SqlDelimiter.LEFT_PARENTHESES);
         
-        advance(buf);
+        buf.advance();
         skipWhitespacesAndComments(buf);
 
         parseGroup(buf, result, delimiter);
@@ -163,13 +203,13 @@ public class SqlParser {
         return result;
     }
 
-    private void parseGroup(CharBuffer buf, ArrayList<SqlToken> tokenBuffer, char delimiter) throws SqlParseException {
-        while(buf.hasRemaining()) {
+    private void parseGroup(ParseBuffer buf, ArrayList<SqlToken> tokenBuffer, char delimiter) throws SqlParseException {
+        while(!buf.isEmpty()) {
             // Parse token
             char startChar = buf.charAt(0);
 
             if (startChar == delimiter) {
-                buf.get();
+                buf.advance();
                 return;
             }
 
@@ -181,7 +221,7 @@ public class SqlParser {
                 
                 String word = buf.subSequence(0, end).toString();
 
-                advance(buf, end);
+                buf.advance(end);
                 
                 tokenBuffer.add(SqlReservedKeyword.isKeyword(word) ? SqlReservedKeyword.create(word) : new SqlIdentifier(word));
             }
@@ -193,10 +233,10 @@ public class SqlParser {
                 
                 String number = buf.subSequence(0, end).toString();
                 
-                advance(buf, end);
+                buf.advance(end);
                 
-                if (buf.remaining() >= 2 && buf.charAt(0) == '.' && SqlUtil.isNumber(buf.charAt(1))) {
-                    advance(buf, 1);
+                if (buf.length() >= 2 && buf.charAt(0) == '.' && SqlUtil.isNumber(buf.charAt(1))) {
+                    buf.advance();
                     
                     end = StringUtils.indexOfAnyBut(buf, SqlUtil.NUMERIC_CHARS);
 
@@ -205,7 +245,7 @@ public class SqlParser {
                     
                     number = number + "." + buf.subSequence(0, end).toString();
 
-                    advance(buf, end);
+                    buf.advance(end);
 
                     tokenBuffer.add(new SqlReal(Double.parseDouble(number)));
                 }
@@ -220,6 +260,7 @@ public class SqlParser {
                     case '(' -> tokenBuffer.add(new SqlTokenGroup(parseGroup(buf, ')')));
                     case ',' -> parseDelimiter(buf, tokenBuffer, SqlDelimiter.COMMA);
                     case '=' -> parseDelimiter(buf, tokenBuffer, SqlDelimiter.EQUAL);
+                    case '.' -> parseDelimiter(buf, tokenBuffer, SqlDelimiter.DOT);
                     default -> throw new SqlParseException("Unexpected \"" + startChar + "\"", buf);
                 }
             }
@@ -232,18 +273,18 @@ public class SqlParser {
         }
     }
     
-    private void parseDelimiter(CharBuffer buf, ArrayList<SqlToken> tokenBuffer, SqlDelimiter delimiter) {
+    private void parseDelimiter(ParseBuffer buf, ArrayList<SqlToken> tokenBuffer, SqlDelimiter delimiter) {
         tokenBuffer.add(delimiter);
-        buf.get();
+        buf.advance();
     }
 
-    private void parseString(CharBuffer buf, ArrayList<SqlToken> tokenBuffer, char startChar) throws SqlParseException {
+    private void parseString(ParseBuffer buf, ArrayList<SqlToken> tokenBuffer, char startChar) throws SqlParseException {
         stringBuffer.setLength(0);
         
-        buf.get();
+        buf.advance();
 
-        while(buf.hasRemaining()) {
-            char ch = buf.get();
+        while(!buf.isEmpty()) {
+            char ch = buf.getAdvance();
             
             if (ch == startChar) {
                 tokenBuffer.add(new SqlString(stringBuffer.toString()));
@@ -251,7 +292,7 @@ public class SqlParser {
             }
 
             if (ch == '\\') {
-                char escaped = buf.get();
+                char escaped = buf.getAdvance();
                 
                 stringBuffer.append(switch (escaped) {
                     case 'b' -> '\b';
@@ -269,7 +310,7 @@ public class SqlParser {
         throw new SqlParseException("No closing delimiter for string: " + startChar, buf);
     }
 
-    private void parseIdentifier(CharBuffer buf, ArrayList<SqlToken> tokenBuffer) throws SqlParseException {
+    private void parseIdentifier(ParseBuffer buf, ArrayList<SqlToken> tokenBuffer) throws SqlParseException {
         int end = StringUtils.indexOf(buf, '`', 1);
         
         if (end == -1) {
@@ -278,7 +319,7 @@ public class SqlParser {
         
         tokenBuffer.add(new SqlIdentifier(buf.subSequence(1, end).toString()));
         
-        advance(buf, end + 1);
+        buf.advance(end + 1);
     }
     
 }
