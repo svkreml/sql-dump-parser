@@ -16,13 +16,13 @@
  */
 package com.azazar.sqldumpparser;
 
+import java.util.Map;
+
 /**
  *
  * @author Mikhail Yevchenko <spam@uo1.net>
  * @since  May 17, 2023
  */
-public interface SqlValue extends SqlToken {
-    
-    Object getValue();
-
+public interface SqlInsertParseCallback {
+    void onInsert(String tableName, Map<String, SqlValue> values);
 }

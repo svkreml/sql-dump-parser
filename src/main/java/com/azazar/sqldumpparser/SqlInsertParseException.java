@@ -21,8 +21,31 @@ package com.azazar.sqldumpparser;
  * @author Mikhail Yevchenko <spam@uo1.net>
  * @since  May 17, 2023
  */
-public interface SqlValue extends SqlToken {
+public class SqlInsertParseException extends Exception {
+
+    public SqlInsertParseException(String s, SqlStatement sqlStatement) {
+        super(s + " in " + sqlStatement);
+    }
     
-    Object getValue();
+    public SqlInsertParseException(String s) {
+        super(s);
+    }
+
+    public WrappedSqlInsertParseException wrap() {
+        return new WrappedSqlInsertParseException(this);
+    }
+    
+    static class WrappedSqlInsertParseException extends RuntimeException {
+
+        WrappedSqlInsertParseException(SqlInsertParseException cause) {
+            super(cause);
+        }
+
+        @Override
+        public synchronized SqlInsertParseException getCause() {
+            return (SqlInsertParseException)super.getCause();
+        }
+
+    }
 
 }
