@@ -20,7 +20,7 @@ package com.azazar.sqldumpparser;
  *
  * @author Azazar <spam@azazar.com>
  */
-public class SqlInteger implements SqlToken {
+public class SqlInteger implements SqlValue {
     
     public long value;
 
@@ -50,7 +50,12 @@ public class SqlInteger implements SqlToken {
         return this.value == other.value;
     }
 
-    public long getValue() {
+    public long getLong() {
+        return value;
+    }
+
+    @Override
+    public Object getValue() {
         return value;
     }
 

@@ -22,7 +22,7 @@ import java.util.Objects;
  *
  * @author Azazar <spam@azazar.com>
  */
-public class SqlString implements SqlToken {
+public class SqlString implements SqlValue {
     
     private String string;
 
@@ -52,6 +52,11 @@ public class SqlString implements SqlToken {
         return Objects.equals(this.string, other.string);
     }
 
+    public String getString() {
+        return string;
+    }
+
+    @Override
     public String getValue() {
         return string;
     }

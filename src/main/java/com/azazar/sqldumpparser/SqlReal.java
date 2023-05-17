@@ -20,7 +20,7 @@ package com.azazar.sqldumpparser;
  *
  * @author Azazar <spam@azazar.com>
  */
-public class SqlReal implements SqlToken {
+public class SqlReal implements SqlValue {
     
     public double value;
 
@@ -50,7 +50,12 @@ public class SqlReal implements SqlToken {
         return Double.doubleToLongBits(this.value) == Double.doubleToLongBits(other.value);
     }
 
-    public double getValue() {
+    public double getDouble() {
+        return value;
+    }
+
+    @Override
+    public Double getValue() {
         return value;
     }
 

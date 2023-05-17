@@ -105,9 +105,9 @@ public class SqlParserTest {
 
         assertEquals("SELECT", stmt.getCommand());
         var sqlStr = (SqlString) tokens.get(1);
-        assertEquals("Hello,\n World!", sqlStr.getValue());
+        assertEquals("Hello,\n World!", sqlStr.getString());
         var sqlInt = (SqlInteger) tokens.get(3);
-        assertEquals(1234, sqlInt.getValue());
+        assertEquals(1234, sqlInt.getLong());
 
         stmt = ts.get(1);
         tokens = stmt.getTokens();
@@ -129,11 +129,11 @@ public class SqlParserTest {
         var valuesGroup = (SqlTokenGroup) tokens.get(5);
         var valuesTokens = valuesGroup.getTokens();
         assertEquals(SqlDelimiter.LEFT_PARENTHESES, valuesTokens.get(0));
-        assertEquals("a", ((SqlString) valuesTokens.get(1)).getValue());
+        assertEquals("a", ((SqlString) valuesTokens.get(1)).getString());
         assertEquals(SqlDelimiter.COMMA, valuesTokens.get(2));
-        assertEquals(1234, ((SqlInteger) valuesTokens.get(3)).getValue());
+        assertEquals(1234, ((SqlInteger) valuesTokens.get(3)).getLong());
         assertEquals(SqlDelimiter.COMMA, valuesTokens.get(4));
-        assertEquals(1234.5678, ((SqlReal) valuesTokens.get(5)).getValue(), 1e-4);
+        assertEquals(1234.5678, ((SqlReal) valuesTokens.get(5)).getDouble(), 1e-4);
         assertEquals(SqlDelimiter.RIGHT_PARENTHESES, valuesTokens.get(6));
     }
 
@@ -200,12 +200,12 @@ public class SqlParserTest {
         assertEquals("email", ((SqlIdentifier)tokens.get(3)).getId());
         assertEquals(SqlDelimiter.EQUAL, tokens.get(4));
         var sqlStr = (SqlString)tokens.get(5);
-        assertEquals("new_email@example.com", sqlStr.getValue());
+        assertEquals("new_email@example.com", sqlStr.getString());
         assertEquals(SqlReservedKeyword.WHERE, tokens.get(6));
         assertEquals("id", ((SqlIdentifier)tokens.get(7)).getId());
         assertEquals(SqlDelimiter.EQUAL, tokens.get(8));
         var sqlInt = (SqlInteger)tokens.get(9);
-        assertEquals(42, sqlInt.getValue());
+        assertEquals(42, sqlInt.getLong());
     }
 
     @Test
@@ -228,7 +228,7 @@ public class SqlParserTest {
         assertEquals("id", ((SqlIdentifier)tokens.get(4)).getId());
         assertEquals(SqlDelimiter.EQUAL, tokens.get(5));
         var sqlInt = (SqlInteger)tokens.get(6);
-        assertEquals(42, sqlInt.getValue());
+        assertEquals(42, sqlInt.getLong());
     }    
 
 }
