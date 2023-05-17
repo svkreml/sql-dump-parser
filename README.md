@@ -66,21 +66,14 @@ This library provides a simple SQL dump parser to process SQL statements and ext
 import com.azazar.sqldumpparser.*;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         String sql = "INSERT INTO users (id, name, age) VALUES (1, 'John Doe', 30);";
         
-        try {
-            SqlParser parser = new SqlParser();
-            List<SqlStatement> statements = parser.parse(sql);
-            
-            for (SqlStatement stmt : statements) {
-                if (stmt.getCommand().toString().equalsIgnoreCase("INSERT")) {
-                    System.out.println("INSERT statement found:");
-                    System.out.println(stmt);
-                }
+        for (SqlStatement stmt : new SqlParser().parse(sql)) {
+            if (stmt.getCommand().toString().equalsIgnoreCase("INSERT")) {
+                System.out.println("INSERT statement found:");
+                System.out.println(stmt);
             }
-        } catch (SqlParseException e) {
-            e.printStackTrace();
         }
     }
 }
@@ -95,21 +88,14 @@ import java.io.IOException;
 import java.util.List;
 
 public class Main {
-    public static void main(String[] args) {
-        try {
-            FileReader fileReader = new FileReader("path/to/your/sql_dump.sql");
-            
-            SqlParser parser = new SqlParser();
-            List<SqlStatement> statements = parser.parse(fileReader);
-            
-            for (SqlStatement stmt : statements) {
-                if (stmt.getCommand().toString().equalsIgnoreCase("INSERT")) {
-                    System.out.println("INSERT statement found:");
+    public static void main(String[] args) throws Exception {
+        try (FileReader fileReader = new FileReader("path/to/your/sql_dump.sql")) {
+            for (SqlStatement stmt : new SqlParser().parse(fileReader)) {
+                if (stmt.getCommand().toString().equalsIgnoreCase("UPDATE")) {
+                    System.out.println("UPDATE statement found:");
                     System.out.println(stmt);
                 }
             }
-        } catch (SqlParseException | IOException e) {
-            e.printStackTrace();
         }
     }
 }
@@ -118,37 +104,28 @@ public class Main {
 ### Example 3: Extracting Data from an INSERT Statement
 
 ```java
-import com.azazar.sqldumpparser.*;
-import com.azazar.sqldumpparser.util.ParseBuffer;
-import java.util.List;
+import com.azazar.sqldumpparser.SqlInsertParser;
+import com.azazar.sqldumpparser.SqlValue;
+
+import java.io.StringReader;
+import java.util.Set;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 public class Main {
-    public static void main(String[] args) {
-        String sql = "INSERT INTO users (id, name, age) VALUES (1, 'John Doe', 30);";
-        
-        try {
-            SqlParser parser = new SqlParser();
-            List<SqlStatement> statements = parser.parse(sql);
-            
-            for (SqlStatement stmt : statements) {
-                if (stmt.getCommand().toString().equalsIgnoreCase("INSERT")) {
-                    System.out.println("Data from INSERT statement:");
+    public static void main(String[] args) throws Exception {
+        var inputSql = "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 30), (2, 'Bob', 25);";
+        var inputReader = new StringReader(inputSql);
 
-                    List<SqlToken> tokens = stmt.getTokens();
-                    int valueStartIndex = tokens.indexOf(SqlDelimiter.LEFT_PARENTHESES) + 1;
-                    int valueEndIndex = tokens.lastIndexOf(SqlDelimiter.RIGHT_PARENTHESES);
-
-                    for (int i = valueStartIndex; i < valueEndIndex; i++) {
-                        SqlToken token = tokens.get(i);
-                        if (token instanceof SqlString || token instanceof SqlInteger || token instanceof SqlReal) {
-                            System.out.println(token);
-                        }
-                    }
-                }
+        SqlInsertParser.parse(inputReader, Set.of("users"), (tableName, values) -> {
+            Map<String, Object> actualValues = new LinkedHashMap<>();
+            for (var entry : values.entrySet()) {
+                actualValues.put(entry.getKey(), entry.getValue().getValue());
             }
-        } catch (SqlParseException e) {
-            e.printStackTrace();
-        }
+
+            System.out.println("Inserting into table: " + tableName);
+            System.out.println("Values: " + actualValues);
+        });
     }
 }
 ```
