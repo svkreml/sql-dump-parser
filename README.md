@@ -4,14 +4,6 @@
 
 SQL Dump Parser is a lightweight Java library designed to parse SQL dump files, focusing on handling SQL statements and tokens from a given input string. The library supports basic SQL syntax, including SELECT, INSERT, and CREATE TABLE statements. It can be extended to support additional SQL dialects and constructs.
 
-## Features
-
-- Parses multiple SQL statements
-- Handles white spaces and comments
-- Processes various SQL tokens such as keywords, identifiers, strings, numbers, and delimiters
-- Creates `SqlStatement` objects from parsed tokens
-- Supports basic SQL syntax, including SELECT, INSERT, and CREATE TABLE statements
-
 ## Installation
 
 ### Using JitPack
