@@ -37,8 +37,7 @@ public class InsertParserTest {
 
     @BeforeEach
     void setUp() {
-        tableNames = new HashSet<>();
-        tableNames.add("users");
+        tableNames = Set.of("users", "libgenrelist");
         capturedInserts = new ArrayList<>();
     }
 
@@ -77,6 +76,42 @@ public class InsertParserTest {
         expectedValues2.put("id", 2L);
         expectedValues2.put("name", "Bob");
         expectedValues2.put("age", 25L);
+
+        assertDeepEquals(expectedValues1, capturedInserts.get(0));
+        assertDeepEquals(expectedValues2, capturedInserts.get(1));
+    }
+
+    @Test
+    void testInsertWithoutColumnsParser() throws Exception {
+        String inputSql = "INSERT INTO `libgenrelist` VALUES (1,'sf_history','Альтернативная история','Фантастика'),(2,'sf_action','Боевая фантастика','Фантастика'),(3,'sf_epic','Эпическая фантастика','Фантастика'),(4,'sf_heroic','Героическая фантастика','Фантастика'),(252,'tbg_higher','Учебники и пособия ВУЗов','Учебники и пособия'),(254,'popadancy','Попаданцы','Фантастика');";
+
+        StringReader inputReader = new StringReader(inputSql);
+
+        SqlInsertParseCallback callback = (tableName, values) -> {
+            var m = new LinkedHashMap<String, Object>();
+            for (Map.Entry<String,SqlValue> e : values.entrySet()) {
+                m.put(e.getKey(), e.getValue().getValue());
+            }
+            capturedInserts.add(m);
+        };
+
+        SqlInsertParser.parse(inputReader, tableNames, callback);
+
+        assertEquals(6, capturedInserts.size());
+
+        Map<String, Object> expectedValues1 = new LinkedHashMap<>();
+
+        expectedValues1.put("#0", 1L);
+        expectedValues1.put("#1", "sf_history");
+        expectedValues1.put("#2", "Альтернативная история");
+        expectedValues1.put("#3", "Фантастика");
+
+        Map<String, Object> expectedValues2 = new LinkedHashMap<>();
+
+        expectedValues2.put("#0", 2L);
+        expectedValues2.put("#1", "sf_action");
+        expectedValues2.put("#2", "Боевая фантастика");
+        expectedValues2.put("#3", "Фантастика");
 
         assertDeepEquals(expectedValues1, capturedInserts.get(0));
         assertDeepEquals(expectedValues2, capturedInserts.get(1));

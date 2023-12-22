@@ -128,29 +128,38 @@ public class SqlInsertParser {
             return; // Table should be ignored
         }
 
-        SqlToken shouldBeGroup = tokens.get(3);
+        SqlToken columnNamesGroupOrValues = tokens.get(3);
 
-        if (!(shouldBeGroup instanceof SqlTokenGroup)) {
-            throw new SqlInsertParseException("\"INSERT\" statement doesn't include column names", stmt);
-        }
+        int index;
 
-        SqlTokenGroup group = (SqlTokenGroup)shouldBeGroup;
+        List<String> columnNames = null;
 
-        if (!SqlDelimiter.LEFT_PARENTHESES.equals(group.getTokens().get(0))) {
-            throw new SqlInsertParseException("\"INSERT\" statement doesn't include column names", stmt);
-        }
+        if (columnNamesGroupOrValues instanceof SqlTokenGroup group) {
+            if (!SqlDelimiter.LEFT_PARENTHESES.equals(group.getTokens().get(0))) {
+                throw new SqlInsertParseException("Unexpected token (" + group.getTokens() + ')', stmt);
+            }
         
-        List<String> columnNames = new ArrayList<>();
-        extractTupleIdentifiers(group, columnNames);
-        
-        if (!SqlReservedKeyword.VALUES.equals(tokens.get(4))) {
-            throw new SqlInsertParseException("\"INSERT\" statement doesn't include \"VALUES\" keywords", stmt);
+            columnNames = new ArrayList<>();
+            extractTupleIdentifiers(group, columnNames);
+
+            if (!SqlReservedKeyword.VALUES.equals(tokens.get(4))) {
+                throw new SqlInsertParseException("\"INSERT\" statement doesn't include \"VALUES\" keyword", stmt);
+            }
+
+            index = 5;
+        }
+        else if (SqlReservedKeyword.VALUES.equals(columnNamesGroupOrValues)) {
+            index = 4;
+        }
+        else {
+            throw new SqlInsertParseException("\"INSERT\" statement doesn't include column names or \"VALUES\" keyword", stmt);
         }
 
-        var rowValues = new LinkedHashMap<String, SqlValue>(columnNames.size());
-        var rowValuesArr = new ArrayList<SqlValue>(columnNames.size());
+        var initialCapacity = columnNames == null ? 2 : columnNames.size();
+        var rowValues = new LinkedHashMap<String, SqlValue>(initialCapacity);
+        var rowValuesArr = new ArrayList<SqlValue>(initialCapacity);
 
-        for(int i = 5; i < tokens.size(); i+= 2) {
+        for(int i = index; i < tokens.size(); i+= 2) {
             if (i > 5 && !SqlDelimiter.COMMA.equals(tokens.get(i - 1))) {
                 throw new SqlInsertParseException("Delimiter expected, \"" + tokens.get(i - 1) + "\" found", stmt);
             }
@@ -161,9 +170,17 @@ public class SqlInsertParser {
 
                 extractTupleValues(tg, rowValuesArr);
 
-                for(int j = 0; j < columnNames.size(); j++) {
-                    rowValues.put(columnNames.get(j), rowValuesArr.get(j));
+                if (columnNames == null) {
+                    for(int j = 0; j < rowValuesArr.size(); j++) {
+                        rowValues.put("#" + j, rowValuesArr.get(j));
+                    }
                 }
+                else {
+                    for(int j = 0; j < columnNames.size(); j++) {
+                        rowValues.put(columnNames.get(j), rowValuesArr.get(j));
+                    }
+                }
+
                 callback.onInsert(tableName, rowValues);
             }
             else {
