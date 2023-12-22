@@ -24,7 +24,7 @@ Add the dependency:
 
 ```groovy
 dependencies {
-    implementation 'com.github.azazar:sql-dump-parser:1.3'
+    implementation 'com.github.azazar:sql-dump-parser:1.4'
 }
 ```
 
@@ -47,7 +47,7 @@ Add the dependency:
 <dependency>
     <groupId>com.github.azazar</groupId>
     <artifactId>sql-dump-parser</artifactId>
-    <version>1.3</version>
+    <version>1.4</version>
 </dependency>
 ```
 
