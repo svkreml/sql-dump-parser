@@ -117,4 +117,57 @@ public class InsertParserTest {
         assertDeepEquals(expectedValues2, capturedInserts.get(1));
     }
     
+    @Test
+    void testInsertWithCreateTableParser() throws Exception {
+        String inputSql = 
+            """
+            DROP TABLE IF EXISTS `libgenrelist`;
+
+            /*!40101 SET @saved_cs_client     = @@character_set_client */;
+            /*!40101 SET character_set_client = utf8 */;
+
+            CREATE TABLE `libgenrelist` (
+                `GenreId` int(10) unsigned NOT NULL AUTO_INCREMENT,
+                `GenreCode` varchar(45) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+                `GenreDesc` varchar(99) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+                `GenreMeta` varchar(45) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+                PRIMARY KEY (`GenreId`,`GenreCode`),
+                KEY `meta` (`GenreMeta`)
+            ) ENGINE=MyISAM AUTO_INCREMENT=255 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+            INSERT INTO `libgenrelist` VALUES (1,'sf_history','Альтернативная история','Фантастика'),(2,'sf_action','Боевая фантастика','Фантастика'),(3,'sf_epic','Эпическая фантастика','Фантастика'),(4,'sf_heroic','Героическая фантастика','Фантастика'),(252,'tbg_higher','Учебники и пособия ВУЗов','Учебники и пособия'),(254,'popadancy','Попаданцы','Фантастика');
+            """;
+
+        StringReader inputReader = new StringReader(inputSql);
+
+        SqlInsertParseCallback callback = (tableName, values) -> {
+            var m = new LinkedHashMap<String, Object>();
+            for (Map.Entry<String,SqlValue> e : values.entrySet()) {
+                m.put(e.getKey(), e.getValue().getValue());
+            }
+            capturedInserts.add(m);
+        };
+
+        SqlInsertParser.parse(inputReader, tableNames, callback);
+
+        assertEquals(6, capturedInserts.size());
+
+        Map<String, Object> expectedValues1 = new LinkedHashMap<>();
+
+        expectedValues1.put("GenreId", 1L);
+        expectedValues1.put("GenreCode", "sf_history");
+        expectedValues1.put("GenreDesc", "Альтернативная история");
+        expectedValues1.put("GenreMeta", "Фантастика");
+
+        Map<String, Object> expectedValues2 = new LinkedHashMap<>();
+
+        expectedValues2.put("GenreId", 2L);
+        expectedValues2.put("GenreCode", "sf_action");
+        expectedValues2.put("GenreDesc", "Боевая фантастика");
+        expectedValues2.put("GenreMeta", "Фантастика");
+
+        assertDeepEquals(expectedValues1, capturedInserts.get(0));
+        assertDeepEquals(expectedValues2, capturedInserts.get(1));
+    }
+    
 }
