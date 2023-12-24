@@ -114,7 +114,7 @@ public class SqlInsertParser {
     private static void processInsertStatement(SqlStatement stmt, Set<String> tableNames, SqlInsertParseCallback callback) throws SqlInsertParseException {
         List<SqlToken> tokens = stmt.getTokens();
         
-        if (tokens.size() < 6) {
+        if (tokens.size() < 5) {
             throw new SqlInsertParseException("Statement is too short", stmt);
         }
 

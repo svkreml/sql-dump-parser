@@ -81,6 +81,24 @@ public class InsertParserTest {
     }
 
     @Test
+    void testShortInsertParsing() throws Exception {
+        String inputSql = "INSERT INTO users VALUES (1);";
+        StringReader inputReader = new StringReader(inputSql);
+        
+        SqlInsertParseCallback callback = (tableName, values) -> {
+            var m = new LinkedHashMap<String, Object>();
+            for (Map.Entry<String,SqlValue> e : values.entrySet()) {
+                m.put(e.getKey(), e.getValue().getValue());
+            }
+            capturedInserts.add(m);
+        };
+        
+        SqlInsertParser.parse(inputReader, tableNames, callback);
+        
+        assertEquals(1, capturedInserts.size());
+    }
+
+    @Test
     void testInsertWithoutColumnsParser() throws Exception {
         String inputSql = "INSERT INTO `libgenrelist` VALUES (1,'sf_history','Альтернативная история','Фантастика'),(2,'sf_action','Боевая фантастика','Фантастика'),(3,'sf_epic','Эпическая фантастика','Фантастика'),(4,'sf_heroic','Героическая фантастика','Фантастика'),(252,'tbg_higher','Учебники и пособия ВУЗов','Учебники и пособия'),(254,'popadancy','Попаданцы','Фантастика');";
 
