@@ -231,4 +231,17 @@ public class SqlParserTest {
         assertEquals(42, sqlInt.getLong());
     }    
 
+    @Test
+    public void testStreamParsing() throws Exception {
+        var stmt =
+            """
+            DROP TABLE IF EXISTS `libgenrelist`;
+
+            /*!40101 SET @saved_cs_client     = @@character_set_client */;
+            """;
+        var parser = new SqlParser();
+
+        parser.parse(new StringReader(stmt));
+    }
+
 }
