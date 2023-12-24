@@ -56,8 +56,8 @@ public class InsertParserTest {
         
         SqlInsertParseCallback callback = (tableName, values) -> {
             var m = new LinkedHashMap<String, Object>();
-            for (Map.Entry<String,SqlValue> e : values.entrySet()) {
-                m.put(e.getKey(), e.getValue().getValue());
+            for (Map.Entry<String,Object> e : values.entrySet()) {
+                m.put(e.getKey(), e.getValue());
             }
             capturedInserts.add(m);
         };
@@ -87,8 +87,8 @@ public class InsertParserTest {
         
         SqlInsertParseCallback callback = (tableName, values) -> {
             var m = new LinkedHashMap<String, Object>();
-            for (Map.Entry<String,SqlValue> e : values.entrySet()) {
-                m.put(e.getKey(), e.getValue().getValue());
+            for (Map.Entry<String,Object> e : values.entrySet()) {
+                m.put(e.getKey(), e.getValue());
             }
             capturedInserts.add(m);
         };
@@ -106,8 +106,8 @@ public class InsertParserTest {
 
         SqlInsertParseCallback callback = (tableName, values) -> {
             var m = new LinkedHashMap<String, Object>();
-            for (Map.Entry<String,SqlValue> e : values.entrySet()) {
-                m.put(e.getKey(), e.getValue().getValue());
+            for (Map.Entry<String,Object> e : values.entrySet()) {
+                m.put(e.getKey(), e.getValue());
             }
             capturedInserts.add(m);
         };
@@ -135,7 +135,6 @@ public class InsertParserTest {
     }
     
     @Test
-    @Disabled
     void testInsertWithCreateTableParser() throws Exception {
         String inputSql = 
             """
@@ -157,8 +156,8 @@ public class InsertParserTest {
 
         SqlInsertParseCallback callback = (tableName, values) -> {
             var m = new LinkedHashMap<String, Object>();
-            for (Map.Entry<String,SqlValue> e : values.entrySet()) {
-                m.put(e.getKey(), e.getValue().getValue());
+            for (Map.Entry<String,Object> e : values.entrySet()) {
+                m.put(e.getKey(), e.getValue());
             }
             capturedInserts.add(m);
         };

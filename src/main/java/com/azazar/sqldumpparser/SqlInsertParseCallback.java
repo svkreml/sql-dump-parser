@@ -16,6 +16,7 @@
  */
 package com.azazar.sqldumpparser;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -24,5 +25,6 @@ import java.util.Map;
  * @since  May 17, 2023
  */
 public interface SqlInsertParseCallback {
-    void onInsert(String tableName, Map<String, SqlValue> values);
+    void onInsert(String tableName, Map<String, Object> values);
+    default void onCreateTable(String tableName, List<String> fieldNames) {}
 }

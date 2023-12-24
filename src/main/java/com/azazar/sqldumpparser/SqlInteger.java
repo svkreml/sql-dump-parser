@@ -20,7 +20,7 @@ package com.azazar.sqldumpparser;
  *
  * @author Azazar <spam@azazar.com>
  */
-public class SqlInteger implements SqlValue {
+public class SqlInteger extends Number implements SqlValue {
     
     public long value;
 
@@ -43,9 +43,15 @@ public class SqlInteger implements SqlValue {
         if (obj == null) {
             return false;
         }
+
+        if (obj instanceof Number otherNumber) {
+            return otherNumber.longValue() == value;
+        }
+
         if (getClass() != obj.getClass()) {
             return false;
         }
+
         final SqlInteger other = (SqlInteger) obj;
         return this.value == other.value;
     }
@@ -62,6 +68,26 @@ public class SqlInteger implements SqlValue {
     @Override
     public String toString() {
         return Long.toString(value);
+    }
+
+    @Override
+    public int intValue() {
+        return (int) value;
+    }
+
+    @Override
+    public long longValue() {
+        return value;
+    }
+
+    @Override
+    public float floatValue() {
+        return (float) value;
+    }
+
+    @Override
+    public double doubleValue() {
+        return (double) value;
     }
 
 }

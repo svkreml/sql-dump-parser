@@ -19,8 +19,10 @@ package com.azazar.sqldumpparser;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -33,14 +35,32 @@ import java.util.function.Consumer;
 public class SqlInsertParser {
 
     private static Consumer<SqlStatement> createConsumer(Set<String> tableNames, SqlInsertParseCallback callback) {
+        var tableFields = new HashMap<String, List<String>>();
+
         return stmt -> {
-            if (stmt.getCommand().toString().equalsIgnoreCase("INSERT")) {
-                try {
-                    processInsertStatement(stmt, tableNames, callback);
-                }
-                catch (SqlInsertParseException e) {
-                    throw e.wrap();
-                }
+            switch (stmt.getCommand().toString().toUpperCase()) {
+                case "CREATE":
+                    if (stmt.getTokens().size() >= 4 && stmt.getTokens().get(1).toString().equalsIgnoreCase("TABLE")) {
+                        var tableName = ((SqlIdentifier) stmt.getTokens().get(2)).getId();
+
+                        if (tableNames.contains(tableName) && stmt.getTokens().get(3) instanceof SqlTokenGroup tableDef) {
+                            try {
+                                tableFields.put(tableName.toLowerCase(), parseCreateTableStatement(stmt, tableName, tableDef, callback));
+                            }
+                            catch (SqlInsertParseException e) {
+                                throw e.wrap();
+                            }
+                        }
+                    }
+                    break;
+                case "INSERT":
+                    try {
+                        processInsertStatement(stmt, tableNames, tableFields, callback);
+                    }
+                    catch (SqlInsertParseException e) {
+                        throw e.wrap();
+                    }
+                    break;
             }
         };
     }
@@ -111,7 +131,30 @@ public class SqlInsertParser {
         }
     }
 
-    private static void processInsertStatement(SqlStatement stmt, Set<String> tableNames, SqlInsertParseCallback callback) throws SqlInsertParseException {
+    private static List<String> parseCreateTableStatement(SqlStatement stmt, String tableName, SqlTokenGroup tableDef, SqlInsertParseCallback callback) throws SqlInsertParseException {
+        if (SqlDelimiter.LEFT_PARENTHESES != tableDef.getTokens().get(0)) {
+            return null;
+        }
+
+        SqlToken previous, token = null;
+
+        var fieldNames = new ArrayList<String>();
+
+        for(int i = 1; i < tableDef.getTokens().size(); i++) {
+            previous = token;
+            token = tableDef.getTokens().get(i);
+
+            if ((i == 1 || previous == SqlDelimiter.COMMA) && token instanceof SqlIdentifier ident) {
+                fieldNames.add(ident.getId());
+            }
+        }
+
+        callback.onCreateTable(tableName.toLowerCase(), fieldNames);
+
+        return fieldNames;
+    }
+
+    private static void processInsertStatement(SqlStatement stmt, Set<String> tableNames, Map<String, List<String>> tablesFields, SqlInsertParseCallback callback) throws SqlInsertParseException {
         List<SqlToken> tokens = stmt.getTokens();
         
         if (tokens.size() < 5) {
@@ -155,8 +198,17 @@ public class SqlInsertParser {
             throw new SqlInsertParseException("\"INSERT\" statement doesn't include column names or \"VALUES\" keyword", stmt);
         }
 
-        var initialCapacity = columnNames == null ? 2 : columnNames.size();
-        var rowValues = new LinkedHashMap<String, SqlValue>(initialCapacity);
+        int initialCapacity = 2;
+        
+        if (columnNames == null) {
+            columnNames = tablesFields.get(tableName.toLowerCase());
+        }
+
+        if (columnNames != null) {
+            initialCapacity = columnNames.size();
+        }
+
+        var rowValues = new LinkedHashMap<String, Object>(initialCapacity);
         var rowValuesArr = new ArrayList<SqlValue>(initialCapacity);
 
         for(int i = index; i < tokens.size(); i+= 2) {
@@ -172,12 +224,12 @@ public class SqlInsertParser {
 
                 if (columnNames == null) {
                     for(int j = 0; j < rowValuesArr.size(); j++) {
-                        rowValues.put("#" + j, rowValuesArr.get(j));
+                        rowValues.put("#" + j, rowValuesArr.get(j).getValue());
                     }
                 }
                 else {
                     for(int j = 0; j < columnNames.size(); j++) {
-                        rowValues.put(columnNames.get(j), rowValuesArr.get(j));
+                        rowValues.put(columnNames.get(j), rowValuesArr.get(j).getValue());
                     }
                 }
 
