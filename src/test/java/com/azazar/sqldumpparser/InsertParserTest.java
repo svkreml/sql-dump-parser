@@ -123,9 +123,6 @@ public class InsertParserTest {
             """
             DROP TABLE IF EXISTS `libgenrelist`;
 
-            /*!40101 SET @saved_cs_client     = @@character_set_client */;
-            /*!40101 SET character_set_client = utf8 */;
-
             CREATE TABLE `libgenrelist` (
                 `GenreId` int(10) unsigned NOT NULL AUTO_INCREMENT,
                 `GenreCode` varchar(45) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
