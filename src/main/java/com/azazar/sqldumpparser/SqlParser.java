@@ -154,7 +154,7 @@ public class SqlParser {
 
             // Skip single line comment
             if(StringUtils.startsWith(buf, "--")) {
-                int end = StringUtils.indexOf(buf, "\n", 2);
+                int end = ParseBufferUtils.indexOf(buf, "\n", 2);
 
                 if (end == -1)
                     buf.advance(buf.length());
@@ -166,7 +166,7 @@ public class SqlParser {
 
             // Skip multiline comment
             while(StringUtils.startsWith(buf, "/*")) {
-                int end = StringUtils.indexOf(buf, "*/", 2);
+                int end = ParseBufferUtils.indexOf(buf, "*/", 2);
 
                 if (end == -1)
                     throw new SqlParseException("Endless comment", buf);
