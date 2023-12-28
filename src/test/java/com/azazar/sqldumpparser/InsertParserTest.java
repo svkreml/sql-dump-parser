@@ -183,5 +183,31 @@ public class InsertParserTest {
         assertDeepEquals(expectedValues1, capturedInserts.get(0));
         assertDeepEquals(expectedValues2, capturedInserts.get(1));
     }
+
+    @Test
+    public void testNegativeNumberValueParsing() throws Exception {
+        String inputSql = "INSERT INTO `users` VALUES (-1, 'Alice', 30);";
+        StringReader inputReader = new StringReader(inputSql);
+
+        SqlInsertParseCallback callback = (tableName, values) -> {
+            var m = new LinkedHashMap<String, Object>();
+            for (Map.Entry<String,Object> e : values.entrySet()) {
+                m.put(e.getKey(), e.getValue());
+            }
+            capturedInserts.add(m);
+        };
+
+        SqlInsertParser.parse(inputReader, tableNames, callback);
+
+        assertEquals(1, capturedInserts.size());
+
+        Map<String, Object> expectedValues1 = new LinkedHashMap<>();
+
+        expectedValues1.put("#0", -1L);
+        expectedValues1.put("#1", "Alice");
+        expectedValues1.put("#2", 30L);
+
+        assertDeepEquals(expectedValues1, capturedInserts.get(0));
+    }
     
 }

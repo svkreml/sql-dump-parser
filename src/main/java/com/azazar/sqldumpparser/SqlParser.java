@@ -225,13 +225,30 @@ public class SqlParser {
                 
                 tokenBuffer.add(SqlReservedKeyword.isKeyword(word) ? SqlReservedKeyword.create(word) : new SqlIdentifier(word));
             }
-            else if (SqlUtil.isNumber(startChar)) {
+            else if (SqlUtil.isNumber(startChar) || startChar == '-') {
+                boolean neg = startChar == '-';
+
+                if (neg) {
+                    buf.advance();
+                }
+
                 int end = StringUtils.indexOfAnyBut(buf, SqlUtil.NUMERIC_CHARS);
 
                 if (end == -1)
                     end = buf.length();
                 
-                String number = buf.subSequence(0, end).toString();
+                StringBuilder number;
+
+                if (neg) {
+                    number = new StringBuilder("-");
+                }
+                else {
+                    number = new StringBuilder();
+                }
+
+                number.ensureCapacity(end);
+                
+                number.append(buf.subSequence(0, end));
                 
                 buf.advance(end);
                 
@@ -243,14 +260,15 @@ public class SqlParser {
                     if (end == -1)
                         end = buf.length();
                     
-                    number = number + "." + buf.subSequence(0, end).toString();
+                    number.append(".");
+                    number.append(buf.subSequence(0, end));
 
                     buf.advance(end);
 
-                    tokenBuffer.add(new SqlReal(Double.parseDouble(number)));
+                    tokenBuffer.add(new SqlReal(Double.parseDouble(number.toString())));
                 }
                 else {
-                    tokenBuffer.add(new SqlInteger(Long.parseLong(number)));
+                    tokenBuffer.add(new SqlInteger(Long.parseLong(number.toString())));
                 }
             }
             else {
