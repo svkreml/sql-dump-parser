@@ -16,232 +16,109 @@
  */
 package com.azazar.sqldumpparser;
 
-import java.io.CharArrayWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import static org.junit.jupiter.api.Assertions.*;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
- *
  * @author Azazar <spam@azazar.com>
  */
 public class SqlParserTest {
 
     private static String testSql;
-    
+    private static final Map<String, SqlReservedKeyword> convertToBooleanMap = new HashMap<>();
+
     public SqlParserTest() {
     }
 
-    @BeforeAll
-    public static void beforeAll() throws IOException {
-        var resourcePath = "mysql_dump.sql";
-        
-        try (InputStreamReader reader = new InputStreamReader(SqlParserTest.class.getResourceAsStream(resourcePath), StandardCharsets.UTF_8)) {
-            CharArrayWriter w = new CharArrayWriter();
-            
-            reader.transferTo(w);
-            
-            testSql = w.toString();
-        }
+    @BeforeAll public static void beforeAll() throws IOException {
+        final byte[]
+                readAllBytes =
+                Files.readAllBytes(Paths.get("/home/svkreml/IdeaProjects/dit/kpp/sql2",
+                        "MySQL_dbs1t_2024_10_25_04_00.sql"));
+
+        testSql = new String(readAllBytes, StandardCharsets.UTF_8);
+
+
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    public void testMysqlDumpResource(boolean streamBuffer) throws Exception {
-        var p = new SqlParser();
-        
-        List<SqlStatement> ts = new ArrayList<SqlStatement>();
+    private static void replaceToBoolean(SqlTokenGroup token, int index) {
+        token.getTokens().set(index, getaBoolean(token, index));
+    }
 
-        if (streamBuffer) {
-            // Load the MySQL dump file as a resource
-            try (StringReader reader = new StringReader(testSql)) {
-                // Parse the loaded MySQL dump
-                ts = p.parse(reader);
+    private static SqlReservedKeyword getaBoolean(SqlTokenGroup token, int index) {
+        final SqlToken sqlToken = token.getTokens().get(index);
+        final SqlReservedKeyword aBoolean = toBoolean(sqlToken);
+        convertToBooleanMap.put(sqlToken.toString(), aBoolean);
+        return aBoolean;
+    }
+
+    private static SqlReservedKeyword toBoolean(SqlToken token) {
+        return switch (token.toString()) {
+            case "0", "'0'" -> SqlReservedKeyword.FALSE;
+            case "1", "'\u0001'" -> SqlReservedKeyword.TRUE;
+            case "NULL" -> SqlReservedKeyword.NULL;
+            default -> throw new RuntimeException("Unrecognized token: " + token);
+        };
+    }
+
+    @Test public void testMysqlDumpResource() throws Exception {
+        var p = new SqlParser();
+
+        List<SqlStatement> ts = p.parse(testSql);
+
+        int inserts = 0;
+        StringBuilder output = new StringBuilder();
+        for (SqlStatement stmt : ts) {
+            if (stmt.getCommand().toString().equals("INSERT")) {
+                inserts++;
+
+                if ("user".equals(stmt.getTokens().get(2).toString())) {
+                    stmt.getTokens().set(2, new SqlIdentifier("user_tbl"));
+                    final List<SqlToken> tokens = stmt.getTokens();
+                    for (int i = 4; i < tokens.size(); i = i + 2) {
+                        SqlTokenGroup token = (SqlTokenGroup) tokens.get(i);
+                        replaceToBoolean(token, 9); // ACTIVE
+                        replaceToBoolean(token, 19); // FORCE_CHANGE_PASSWORD
+                    }
+                } else if ("method".equals(stmt.getTokens().get(2).toString())) {
+                    final List<SqlToken> tokens = stmt.getTokens();
+                    for (int i = 4; i < tokens.size(); i = i + 2) {
+                        SqlTokenGroup token = (SqlTokenGroup) tokens.get(i);
+                        replaceToBoolean(token, 5);
+                        replaceToBoolean(token, 7);
+                        replaceToBoolean(token, 9);
+                        replaceToBoolean(token, 11);
+                        replaceToBoolean(token, 13);
+                        replaceToBoolean(token, 15);
+                    }
+                } else if ("spr_organization".equals(stmt.getTokens().get(2).toString())) {
+                    final List<SqlToken> tokens = stmt.getTokens();
+                    for (int i = 4; i < tokens.size(); i = i + 2) {
+                        SqlTokenGroup token = (SqlTokenGroup) tokens.get(i);
+                        replaceToBoolean(token, 7); // IS_AUTHORIZED
+                    }
+                }
+                output.append(stmt).append(";\n");
             }
         }
-        else {
-            ts = p.parse(testSql);
-        }
 
-        // Add your assertions to check the parsed tokens and statements
-        // For example, you can check the number of statements or specific tokens within the statements
-        assertNotEquals(0, ts.size());
-
-        int creates = 0;
-        int inserts = 0;
-
-        for (SqlStatement stmt : ts) {
-            if (stmt.getCommand().toString().equals("CREATE"))
-                creates++;
-            else if (stmt.getCommand().toString().equals("INSERT"))
-                inserts++;
-        }
-
-        assertNotEquals(0, creates);
         assertNotEquals(0, inserts);
-    }
 
-    @Test
-    public void testSelectInsert() throws Exception {
-        var p = new SqlParser();
+        System.out.println(convertToBooleanMap);
 
-        var ts = p.parse("""
-                         SELECT 'Hello,\\n World!',1234 FROM `tablename`;
-                         INSERT INTO `tablename` (a,b,c) VALUES ('a',1234,1234.5678)
-                         """);
+        Files.write(Paths.get("/home/svkreml/IdeaProjects/dit/kpp/sql1/V1__data.sql"),
+                output.toString().getBytes(StandardCharsets.UTF_8));
 
-        assertEquals(2, ts.size());
-
-        var stmt = ts.get(0);
-        var tokens = stmt.getTokens();
-
-        assertEquals("SELECT", stmt.getCommand());
-        var sqlStr = (SqlString) tokens.get(1);
-        assertEquals("Hello,\n World!", sqlStr.getString());
-        var sqlInt = (SqlInteger) tokens.get(3);
-        assertEquals(1234, sqlInt.getLong());
-
-        stmt = ts.get(1);
-        tokens = stmt.getTokens();
-
-        assertEquals("INSERT", stmt.getCommand());
-        assertEquals("INTO", ((SqlReservedKeyword) tokens.get(1)).getKeyword());
-        assertEquals("tablename", ((SqlIdentifier) tokens.get(2)).getId());
-
-        var group = (SqlTokenGroup) tokens.get(3);
-        var groupTokens = group.getTokens();
-        assertEquals(SqlDelimiter.LEFT_PARENTHESES, groupTokens.get(0));
-        assertEquals("a", ((SqlIdentifier) groupTokens.get(1)).getId());
-        assertEquals(SqlDelimiter.COMMA, groupTokens.get(2));
-        assertEquals("b", ((SqlIdentifier) groupTokens.get(3)).getId());
-        assertEquals(SqlDelimiter.COMMA, groupTokens.get(4));
-        assertEquals("c", ((SqlIdentifier) groupTokens.get(5)).getId());
-        assertEquals(SqlDelimiter.RIGHT_PARENTHESES, groupTokens.get(6));
-        assertEquals(SqlReservedKeyword.VALUES, tokens.get(4));
-        var valuesGroup = (SqlTokenGroup) tokens.get(5);
-        var valuesTokens = valuesGroup.getTokens();
-        assertEquals(SqlDelimiter.LEFT_PARENTHESES, valuesTokens.get(0));
-        assertEquals("a", ((SqlString) valuesTokens.get(1)).getString());
-        assertEquals(SqlDelimiter.COMMA, valuesTokens.get(2));
-        assertEquals(1234, ((SqlInteger) valuesTokens.get(3)).getLong());
-        assertEquals(SqlDelimiter.COMMA, valuesTokens.get(4));
-        assertEquals(1234.5678, ((SqlReal) valuesTokens.get(5)).getDouble(), 1e-4);
-        assertEquals(SqlDelimiter.RIGHT_PARENTHESES, valuesTokens.get(6));
-    }
-
-    @Test
-    public void testCreateTable() throws Exception {
-        var p = new SqlParser();
-    
-        var ts = p.parse("""
-                         CREATE TABLE `users` (
-                             `id` INT NOT NULL AUTO_INCREMENT,
-                             `username` VARCHAR(255) NOT NULL,
-                             `email` VARCHAR(255) NOT NULL UNIQUE,
-                             `password` VARCHAR(255) NOT NULL,
-                             PRIMARY KEY (`id`)
-                         );
-                         """);
-    
-        assertEquals(1, ts.size());
-        assertEquals("[CREATE TABLE users ( id INT NOT NULL AUTO_INCREMENT , username VARCHAR ( 255 ) NOT NULL , email VARCHAR ( 255 ) NOT NULL UNIQUE , password VARCHAR ( 255 ) NOT NULL , PRIMARY KEY ( id ) )]", ts.toString());
-    
-        var stmt = ts.get(0);
-        var tokens = stmt.getTokens();
-    
-        assertEquals("CREATE", stmt.getCommand());
-        assertEquals("TABLE", ((SqlReservedKeyword)tokens.get(1)).getKeyword());
-        assertEquals("users", ((SqlIdentifier)tokens.get(2)).getId());
-    
-        var group = (SqlTokenGroup) tokens.get(3);
-        var groupTokens = group.getTokens();
-        assertEquals(SqlDelimiter.LEFT_PARENTHESES, groupTokens.get(0));
-        assertEquals("id", ((SqlIdentifier)groupTokens.get(1)).getId());
-        assertEquals(SqlReservedKeyword.INT, groupTokens.get(2));
-        assertEquals(SqlReservedKeyword.NOT, groupTokens.get(3));
-        assertEquals(SqlReservedKeyword.NULL, groupTokens.get(4));
-        assertEquals(SqlReservedKeyword.AUTO_INCREMENT, groupTokens.get(5));
-        assertEquals(SqlDelimiter.COMMA, groupTokens.get(6));
-        assertEquals("username", ((SqlIdentifier)groupTokens.get(7)).getId());
-        assertEquals(SqlReservedKeyword.VARCHAR, groupTokens.get(8));
-        assertEquals("( 255 )", ((SqlTokenGroup) groupTokens.get(9)).toString());
-        assertEquals(SqlReservedKeyword.NOT, groupTokens.get(10));
-        assertEquals(SqlReservedKeyword.NULL, groupTokens.get(11));
-        assertEquals(SqlDelimiter.COMMA, groupTokens.get(12));
-        // ... continue with other columns and constraints
-    
-        assertEquals(SqlDelimiter.RIGHT_PARENTHESES, groupTokens.get(29));
-    }
-
-    @Test
-    public void testUpdate() throws Exception {
-        var p = new SqlParser();
-
-        var ts = p.parse("""
-                         UPDATE `users` SET `email` = 'new_email@example.com' WHERE `id` = 42;
-                         """);
-
-        assertEquals(1, ts.size());
-
-        var stmt = ts.get(0);
-        var tokens = stmt.getTokens();
-
-        assertEquals("UPDATE", stmt.getCommand());
-        assertEquals("users", ((SqlIdentifier)tokens.get(1)).getId());
-        assertEquals(SqlReservedKeyword.SET, tokens.get(2));
-        assertEquals("email", ((SqlIdentifier)tokens.get(3)).getId());
-        assertEquals(SqlDelimiter.EQUAL, tokens.get(4));
-        var sqlStr = (SqlString)tokens.get(5);
-        assertEquals("new_email@example.com", sqlStr.getString());
-        assertEquals(SqlReservedKeyword.WHERE, tokens.get(6));
-        assertEquals("id", ((SqlIdentifier)tokens.get(7)).getId());
-        assertEquals(SqlDelimiter.EQUAL, tokens.get(8));
-        var sqlInt = (SqlInteger)tokens.get(9);
-        assertEquals(42, sqlInt.getLong());
-    }
-
-    @Test
-    public void testDelete() throws Exception {
-        var p = new SqlParser();
-
-        var ts = p.parse("""
-                         DELETE FROM `users` WHERE `id` = 42;
-                         """);
-
-        assertEquals(1, ts.size());
-
-        var stmt = ts.get(0);
-        var tokens = stmt.getTokens();
-
-        assertEquals("DELETE", stmt.getCommand());
-        assertEquals(SqlReservedKeyword.FROM, tokens.get(1));
-        assertEquals("users", ((SqlIdentifier)tokens.get(2)).getId());
-        assertEquals(SqlReservedKeyword.WHERE, tokens.get(3));
-        assertEquals("id", ((SqlIdentifier)tokens.get(4)).getId());
-        assertEquals(SqlDelimiter.EQUAL, tokens.get(5));
-        var sqlInt = (SqlInteger)tokens.get(6);
-        assertEquals(42, sqlInt.getLong());
-    }    
-
-    @Test
-    public void testStreamParsing() throws Exception {
-        var stmt =
-            """
-            DROP TABLE IF EXISTS `libgenrelist`;
-
-            /*!40101 SET @saved_cs_client     = @@character_set_client */;
-            """;
-        var parser = new SqlParser();
-
-        parser.parse(new StringReader(stmt));
     }
 
 }

@@ -23,7 +23,7 @@ import java.util.Objects;
  * @author Azazar <spam@azazar.com>
  */
 public class SqlString implements SqlValue {
-    
+
     private String string;
 
     public SqlString(String string) {
@@ -63,7 +63,7 @@ public class SqlString implements SqlValue {
 
     @Override
     public String toString() {
-        return "\"" + string.replace("\"", "\\\"") + "\"";
+        return "'" + string.replace("\"", "\\\"") + "'";
     }
 
 }

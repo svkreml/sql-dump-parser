@@ -23,7 +23,7 @@ import java.util.Objects;
  * @author Azazar <spam@azazar.com>
  */
 public class SqlIdentifier implements SqlToken {
-    
+
     private String identifier;
 
     public SqlIdentifier(String identifier) {
@@ -58,9 +58,9 @@ public class SqlIdentifier implements SqlToken {
 
     @Override
     public String toString() {
-        if (SqlReservedKeyword.isKeyword(identifier) || identifier.contains(" ")) {
+/*        if (SqlReservedKeyword.isKeyword(identifier) || identifier.contains(" ")) {
             return '`' + identifier + '`';
-        }
+        }*/
 
         return identifier;
     }
